@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { TemplateCard } from "@/components/template-card";
 import {
-  ArrowRightIcon,
   ArrowUpRightIcon,
   ImageIcon,
   RefreshIcon,

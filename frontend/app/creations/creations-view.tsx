@@ -30,6 +30,7 @@ import {
   taskTone,
 } from "@/lib/format";
 import { useTasks } from "@/lib/hooks";
+import { deriveTaskFeedState } from "@/lib/task-state";
 import type { CreationTask, SimulationConfig, StageKey, TaskStage } from "@/lib/types";
 import styles from "./creations-view.module.css";
 
@@ -161,7 +162,6 @@ function TaskCard({
 }) {
   const tone = taskTone(task.status);
   const currentStage = task.stages.find((stage) => stage.status === "RUNNING");
-  const failedStage = task.stages.find((stage) => stage.status === "FAILED");
   const canPreview = task.status === "SUCCEEDED" && Boolean(task.resultUrl);
   const stageBadge =
     task.status === "QUEUED"
@@ -728,6 +728,12 @@ export default function CreationsView() {
   }, [newParam, router]);
 
   const tasks = useMemo(() => taskQuery.data?.items ?? [], [taskQuery.data]);
+  const feedState = deriveTaskFeedState({
+    hasData: Boolean(taskQuery.data),
+    isPending: taskQuery.isPending,
+    isError: taskQuery.isError,
+    count: tasks.length,
+  });
   const activeCount = tasks.filter((task) => isTaskActive(task.status)).length;
   const succeededCount = tasks.filter((task) => task.status === "SUCCEEDED").length;
   const failedCount = tasks.filter((task) => task.status === "FAILED").length;
@@ -916,7 +922,7 @@ export default function CreationsView() {
             </div>
           ) : null}
 
-          {taskQuery.isError && tasks.length > 0 ? (
+          {feedState === "stale" ? (
             <div className={styles.inlineError} role="status">
               <WifiOffIcon width={20} height={20} />
               <div>
@@ -960,9 +966,9 @@ export default function CreationsView() {
 
           <div className={styles.contentGrid}>
             <div className={styles.mainColumn}>
-              {taskQuery.isPending && !taskQuery.data ? <HistorySkeleton /> : null}
+              {feedState === "loading" ? <HistorySkeleton /> : null}
 
-              {taskQuery.isError && !taskQuery.data ? (
+              {feedState === "unavailable" ? (
                 <HistoryError
                   message={getErrorMessage(taskQuery.error, "读取作品记录时发生了未知错误。")}
                   onRetry={refreshTasks}
@@ -970,7 +976,7 @@ export default function CreationsView() {
                 />
               ) : null}
 
-              {taskQuery.data && tasks.length === 0 ? <EmptyState /> : null}
+              {feedState === "empty" ? <EmptyState /> : null}
 
               {taskQuery.data && tasks.length > 0 && visibleTasks.length === 0 ? (
                 <div className={styles.filterEmpty}>

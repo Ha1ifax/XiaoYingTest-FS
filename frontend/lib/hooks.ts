@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "./api";
-import type { CreationTask } from "./types";
+import { taskPollingInterval, taskQueryKey } from "./task-state";
 
 export function useTemplates(category: string | null) {
   return useQuery({
@@ -36,16 +36,12 @@ export function useCategories() {
 
 export function useTasks(userId: string | undefined) {
   return useQuery({
-    queryKey: ["tasks", userId],
+    queryKey: taskQueryKey(userId),
     queryFn: ({ signal }) => api.getTasks(signal),
     enabled: Boolean(userId),
-    refetchInterval: (query) => {
-      const tasks = query.state.data?.items as CreationTask[] | undefined;
-      return tasks?.some((task) => task.status === "QUEUED" || task.status === "PROCESSING")
-        ? 1_200
-        : false;
-    },
+    refetchInterval: (query) => taskPollingInterval(query.state.data?.items),
     refetchIntervalInBackground: false,
     staleTime: 0,
   });
 }
+

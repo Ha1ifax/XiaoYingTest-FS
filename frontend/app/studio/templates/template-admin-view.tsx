@@ -28,7 +28,6 @@ const MIME_OPTIONS = [
   { value: "image/gif", label: "GIF" },
 ];
 
-const DEFAULT_COVER = "/demo/postcard-cover.jpg";
 const DEFAULT_MIMES = ["image/jpeg", "image/png"];
 
 interface FormState {

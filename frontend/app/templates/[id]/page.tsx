@@ -280,7 +280,7 @@ export default function TemplateDetailPage() {
     void startUpload(index, file);
   }
 
-  async function useSample(sample: (typeof SAMPLE_IMAGES)[number]) {
+  async function fillWithSample(sample: (typeof SAMPLE_IMAGES)[number]) {
     if (!canUseSamples || sampleTarget < 0) return;
     setNotice(null);
     setSampleLoading(sample.src);
@@ -533,7 +533,7 @@ export default function TemplateDetailPage() {
                     aria-busy={sampleLoading === sample.src}
                     aria-label={`用示例照片「${sample.label}」填入第 ${sampleTarget + 1} 个空位`}
                     title={`示例照片：${sample.label}`}
-                    onClick={() => void useSample(sample)}
+                    onClick={() => void fillWithSample(sample)}
                   >
                     <img src={sample.thumb} alt="" width={160} height={200} loading="lazy" />
                     <span aria-hidden="true">+</span>

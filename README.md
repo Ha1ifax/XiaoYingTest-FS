@@ -31,7 +31,11 @@
 | 后端 | MyBatis Spring Boot Starter | 3.0.4 |
 | 数据库 | MySQL | 8.0.44 |
 | 构建 | Maven | 3.9.12 |
-| 运行时 | Node.js（验证用） | 25.2.1 |
+| 测试 | Vitest | 3.2.4 |
+| 测试 | JUnit 5 + Mockito | Spring Boot 3.3.5 管理 |
+| 代码质量 | ESLint 8 + `eslint-config-next` | 8.57.1 / 15.5.28 |
+| CI | GitHub Actions | Node.js 22 + Temurin JDK 17 |
+| 运行时 | Node.js（验证用） | 25.2.1；Docker 镜像使用 Node 22 |
 
 样式使用 CSS Modules 和全局设计变量，未引入 UI 组件库；图标为内联 SVG。图片、封面和示例素材均由本地 Python/Pillow 脚本生成，不依赖外部图床、付费服务或公司内部服务。
 
@@ -43,6 +47,7 @@
 
 ```text
 FullStack/
+├── .github/workflows/ci.yml # push / PR 的前后端 CI
 ├── compose.yaml             # 前端 + Java + MySQL 编排
 ├── .env.example             # Compose 非敏感配置示例
 ├── Kindsight.md             # 视觉分析（非官方重建，仅作设计参考）
@@ -61,15 +66,20 @@ FullStack/
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/             # schema.sql / data.sql（也是容器初始化脚本）
+│   ├── src/test/java/.../task/
+│   │   └── TaskWorkflowRunnerTest.java  # 后台步骤顺序 / 失败中断
 │   ├── data/uploads/       # 运行期上传文件（git 忽略）
 │   ├── data/results/       # 运行期成品（git 忽略）
 │   └── pom.xml
 ├── frontend/
 │   ├── Dockerfile
 │   ├── .dockerignore
+│   ├── .eslintrc.json
+│   ├── vitest.config.ts
 │   ├── app/                # 首页、登录/注册/账号、模板详情、我的片刻
 │   ├── components/         # Header/AuthLayout/Modal/模板卡片/图标
 │   ├── lib/                # API、认证上下文、类型、查询 hooks
+│   ├── lib/task-state.test.ts           # 轮询 / 查询异常 / 多账号隔离
 │   ├── public/demo/        # 7 张模板封面
 │   └── public/samples/     # 5 张示例照片及缩略图
 ├── scripts/generate_demo_assets.py
@@ -243,6 +253,30 @@ npm run start
 | `WORKFLOW_QUEUE_CAPACITY` | `100` | 队列长度 |
 
 前端代理地址：`JAVA_API_ORIGIN`（默认 `http://127.0.0.1:8080`）。
+
+### 4.3 检查、测试与 CI
+
+本地执行与 CI 相同的检查：
+
+```bash
+# 后端：工作流单测 + 构建
+cd backend
+mvn -B test
+mvn -B -DskipTests package
+
+# 前端：Lint + 类型 + 单测 + 生产构建
+cd ../frontend
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+- 后端测试位于 `backend/src/test/java/.../task/TaskWorkflowRunnerTest.java`，覆盖三阶段顺序、指定步骤失败后中断、素材数量不合法和任务抢占失败。
+- 前端测试位于 `frontend/lib/task-state.test.ts`，覆盖查询 Key 的账号隔离、未完成任务轮询与终态停止，以及查询异常、空数据和失败任务的状态区分。
+- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。
+- 提交前最少执行一次完整命令；生产环境只部署通过 `mvn package` 和 `npm run build` 的产物。
 
 ## 5. 页面与演示路径
 
@@ -495,9 +529,13 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 
 | 检查项 | 结果 |
 |---|---|
+| `mvn -B test` | 通过：4 个后台工作流测试，0 failures |
 | `mvn -q -DskipTests package` | 通过 |
+| `npm run lint` | 通过（仅 `next/image` 与 ref cleanup 的 warning，不阻断 CI） |
+| `npm run test` | 通过：7 个前端状态/轮询测试 |
 | `npm run typecheck` | 通过 |
-| `npm run build` | 通过（构建后重启 dev server，避免 `.next` 缓存冲突） |
+| `npm run build` | 通过；构建后以 `next start` 运行生产产物 |
+| GitHub Actions | `.github/workflows/ci.yml` 在 push/PR 执行前后端检查 |
 | 模板列表/分类/详情 API | 7 个模板、4 个分类；不存在模板 404 |
 | 图片上传 | 合法 JPEG/PNG 201；伪装 MIME、超大小、非图片被拒 |
 | 注册/登录 | 注册成功返回 201 + `Set-Cookie`；错误密码 401；重复邮箱 409；未登录访问任务接口 401 |
@@ -524,9 +562,73 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | 生产构建 | `next build` 通过，`next start` 在 3000 端口实测首页、模板、登录、账号、历史、结果图和 `/api` 代理均正常，登录/登出 Cookie 链路通过 |
 | Docker 配置 | `compose.yaml`、Dockerfile、初始化挂载和端口拓扑静态检查通过；初始化 SQL 已在空库实测导入 2 用户/7 模板/4 分类及 `auth_session` 表，并以全新数据库启动 Java 验证自动建表/seed；当前验证环境未安装 Docker，未执行镜像构建 |
 
-前端验证以 Playwright（系统 Edge）+ 实际 Java/MySQL 服务的端到端检查为主，未引入完整的单元测试套件。
+自动化测试负责可重复的关键状态断言，Playwright（系统 Edge）+ 实际 Java/MySQL 服务负责端到端验收；两者不是替代关系。前端测试文件不启动 HTTP 服务，因此不依赖数据库或后端进程。
 
-## 12. 已知边界
+## 12. 实际投入
+
+从首次需求到本次验收（2026-10-28 13:40 至 2026-10-29 03:00，Asia/Shanghai）跨约 13 小时；其中包含等待构建、后台任务和人工查看的时间。以下为按会话内容复盘的有效工作量估算，并非精确计时：
+
+| 阶段 | 主要内容 | 估算有效投入 |
+|---|---|---:|
+| 需求梳理与架构 | 技术选型、API/表结构、异步执行与身份方案 | 1.5 小时 |
+| Java 后端 | 模板/素材/任务、工作流、结果合成、账号与权限 | 3.5 小时 |
+| Next.js 前端 | 模板库/详情/历史/账号/管理页、异步状态与轮询 | 4 小时 |
+| 视觉与素材 | Kindsight 方向、本地封面/样片、响应式与字号调整 | 1.5 小时 |
+| 测试、CI 与文档 | 单测、Lint、Compose、README、截图和端到端验收 | 2 小时 |
+| 合计 | 含 AI 代理的编码与测试执行；人工负责需求、取舍和验收 | **约 12.5 小时** |
+
+协作方式：AI 编码代理承担脚手架、页面/接口实现、测试和文档的大部分执行工作；人工负责目标设定、视觉方向、关键取舍和结果验收。所有 AI 产出都经过本地命令、接口调用或 Playwright 截图复核后才计入完成；本 README 不把未实际运行的 Docker 镜像或 CI 结果写成已验证。
+
+## 13. AI 使用工作流与外部来源
+
+**AI 工作流**
+
+1. 将题目要求拆成 R-01–R-14 验收项，先确认技术栈、状态机、身份和持久化边界。
+2. 以可运行的最小闭环推进：数据/API → 异步工作流 → 前端状态 → 账号/模板管理。
+3. 每轮修改后用 `typecheck`、单测、接口调用或 Playwright 截图验证；发现回归时回到对应层修复。
+4. AI 负责生成实现与测试草稿，人工检查关键交互、视觉和信息层级；未能实际验证的项在“已知边界”中明确标注。
+
+**AI 与外部来源声明**
+
+- 运行时**不调用任何外部 AI 服务**。成品由 `ResultComposer` 使用 Java2D 在服务端拼贴生成，耗时和失败由本地模拟配置控制。
+- 视觉参考来自 getdesign.md 的公开 Kindsight catalog 页面截图；该页面没有发布可下载的官方 DESIGN.md，根目录 `Kindsight.md` 是根据截图整理的**非官方视觉分析**，仅用于版式/色彩/字体方向，不包含对方品牌素材。
+- 模板封面、示例照片、缩略图和 `Kindsight.md` 均由本项目脚本或文档生成；没有下载或使用需要付费/内部授权的图片、字体或 API。界面字体使用系统字体栈，图标是仓库内联 SVG。
+- 代码与文档由 DeepSeek Harness 编码代理辅助编写，最终以本仓库文件和验收命令为准。
+
+## 14. 部署与回滚
+
+### 14.1 当前演示部署
+
+- 前端：`npm run build` 后 `npm start -- -p 3000`（或 `next start -p 3000`）。
+- 后端：`mvn -q -DskipTests package` 后以 JDK 17 执行 `java -jar target/momento-studio-api-1.0.0.jar`。
+- 数据库：MySQL 8，执行 `schema.sql` / `data.sql` 初始化；应用启动时的 `DatabaseMigration` 会补齐旧库新增列和分类表。
+- 生产前设置 `APP_AUTH_COOKIE_SECURE=true`、强数据库密码、反向代理 HTTPS，并关闭不需要的 `/api/dev/simulation`（`APP_DEV_API_ENABLED=false`）。
+- Docker 部署使用根目录 `docker compose up --build`；MySQL 初始化脚本只在空数据卷执行，已有业务数据不会被覆盖。
+
+### 14.2 回滚
+
+1. 代码回滚到上一个已验证 commit，重新执行 `mvn test/package` 与 `npm ci && npm run lint && npm run typecheck && npm run test && npm run build`。
+2. 先停前端与后端，再替换 jar/静态产物；数据库迁移是向前兼容的加列/建表，不自动删列。回滚前备份数据库。
+3. Docker 回滚到上一个镜像 tag 或 commit 后执行 `docker compose up -d --build`；`docker compose down` 默认保留命名卷，**不要**同时使用 `-v`，否则会删除 MySQL 和上传数据。
+4. 需要恢复数据时，用备份 SQL 导入，并将 `backend/data/uploads`、`backend/data/results` 恢复到对应版本；当前演示为单机线程池，不做多实例自动接管。
+
+## 15. 验收路径与 commit
+
+推荐按以下顺序验收：
+
+1. 使用 `lin@momento.studio` / `momento123` 登录，进入模板库确认 7 个模板、4 个分类与管理员入口。
+2. 打开模板详情，选择两张本地示例图，上传完成后提交；立即返回任务 ID，页面跳到“我的片刻”。
+3. 观察“素材检查 → 模拟生成 → 结果整理”的阶段变化，完成后打开 1200×1500 成品预览。
+4. 在演示控制中把三阶段耗时调大，连续创建两个不同模板的任务，确认任务互不串扰；刷新页面确认未结束任务继续跟踪。
+5. 将失败阶段设为 `GENERATE` 或 `FINALIZE`，再提交任务，确认失败阶段、失败原因和后续阶段 `SKIPPED`。
+6. 断网/拦截 `/api/tasks`，确认历史记录保留且任务不被标为失败；恢复后重新同步。
+7. 用管理员身份在 `/studio/templates` 新建一个分类和模板，上下架、编辑并验证删除保护；用普通账号确认管理 API 返回 403。
+8. 执行 `cd backend && mvn -B test`；执行 `cd frontend && npm run lint && npm run typecheck && npm run test && npm run build`。
+
+- **初始交付提交**：`d8c3ebc`（含此前完整站点与文档）。
+- **R-12/R-13 验收提交**：`<pending-final-commit>`（测试、CI、本 README 的最终改动提交；以 `git log` 中带有 `test/ci/docs` 的提交为准）。
+
+## 16. 已知边界
 
 - 账号系统未实现邮箱验证、忘记密码、MFA、第三方登录、账号删除和登录限流；生产部署还需 HTTPS、`APP_AUTH_COOKIE_SECURE=true`、CSRF 防护与审计。
 - 账号会话是数据库持久化的服务端 opaque session，不是 JWT；单机演示足够，但多实例部署需要共享会话表和一致的 Cookie 配置。
@@ -538,7 +640,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 - 不使用 WebSocket/SSE；采用按需轮询并在终态停止，减少无意义请求。
 - 当前开发机没有 Docker CLI，因此 `compose.yaml` 与 Dockerfile 未在本机实际构建；配置已按 Compose v2、MySQL 8、JDK 17、Node 22 的官方镜像约定编写，首次在有 Docker 的机器上运行建议先看 `docker compose logs -f`。
 
-## 13. 截图
+## 17. 截图
 
 | 页面 | 截图 |
 |---|---|
