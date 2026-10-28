@@ -1,5 +1,7 @@
 # MOMENTO 片刻制所
 
+[![CI](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/workflows/ci.yml/badge.svg)](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/workflows/ci.yml)
+
 一个可独立运行的素材制作网站：注册登录后浏览模板、上传照片、提交制作任务，在 Java 后台异步完成多步骤处理后，回到「我的片刻」查看个人历史与成品。页面不调用真实 AI 服务，成品由 Java2D 在服务端拼贴生成；全流程的等待、成功和失败都可以通过演示控制复现。
 
 根目录提供 Docker Compose 配置，可直接在仓库根目录执行 `docker compose up --build` 启动前端、Java 后端、MySQL 和初始化数据；不使用 Docker 时，按第 4.2 节在本机启动即可。
@@ -275,7 +277,8 @@ npm run build
 
 - 后端测试位于 `backend/src/test/java/.../task/TaskWorkflowRunnerTest.java`，覆盖三阶段顺序、指定步骤失败后中断、素材数量不合法和任务抢占失败。
 - 前端测试位于 `frontend/lib/task-state.test.ts`，覆盖查询 Key 的账号隔离、未完成任务轮询与终态停止，以及查询异常、空数据和失败任务的状态区分。
-- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。
+- 前端 lockfile 显式锁定 `@emnapi/core` / `@emnapi/runtime`，避免 npm 对可选 WASM peer 的解析差异导致 `npm ci` 在 Linux CI 中校验失败。
+- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。2026-10-29 的实际运行 [40750221249](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40750221249) 已通过：前端 install/lint/typecheck/test/build 与后端 test/package 全部成功。
 - 提交前最少执行一次完整命令；生产环境只部署通过 `mvn package` 和 `npm run build` 的产物。
 
 ## 5. 页面与演示路径
@@ -535,7 +538,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | `npm run test` | 通过：7 个前端状态/轮询测试 |
 | `npm run typecheck` | 通过 |
 | `npm run build` | 通过；构建后以 `next start` 运行生产产物 |
-| GitHub Actions | `.github/workflows/ci.yml` 在 push/PR 执行前后端检查 |
+| GitHub Actions | 通过：run [40750221249](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40750221249)；前端 install/lint/typecheck/test/build、后端 test/package 均成功 |
 | 模板列表/分类/详情 API | 7 个模板、4 个分类；不存在模板 404 |
 | 图片上传 | 合法 JPEG/PNG 201；伪装 MIME、超大小、非图片被拒 |
 | 注册/登录 | 注册成功返回 201 + `Set-Cookie`；错误密码 401；重复邮箱 409；未登录访问任务接口 401 |
@@ -577,7 +580,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | 测试、CI 与文档 | 单测、Lint、Compose、README、截图和端到端验收 | 2 小时 |
 | 合计 | 含 AI 代理的编码与测试执行；人工负责需求、取舍和验收 | **约 12.5 小时** |
 
-协作方式：AI 编码代理承担脚手架、页面/接口实现、测试和文档的大部分执行工作；人工负责目标设定、视觉方向、关键取舍和结果验收。所有 AI 产出都经过本地命令、接口调用或 Playwright 截图复核后才计入完成；本 README 不把未实际运行的 Docker 镜像或 CI 结果写成已验证。
+协作方式：AI 编码代理承担脚手架、页面/接口实现、测试和文档的大部分执行工作；人工负责目标设定、视觉方向、关键取舍和结果验收。所有 AI 产出都经过本地命令、接口调用或 Playwright 截图复核后才计入完成；本 README 只把实际运行过的 CI 写为已验证，未安装 Docker 的环境不把镜像构建写成已验证。
 
 ## 13. AI 使用工作流与外部来源
 
@@ -626,7 +629,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 8. 执行 `cd backend && mvn -B test`；执行 `cd frontend && npm run lint && npm run typecheck && npm run test && npm run build`。
 
 - **初始交付提交**：`d8c3ebc`（含此前完整站点与文档）。
-- **R-12/R-13 验收提交**：`<pending-final-commit>`（测试、CI、本 README 的最终改动提交；以 `git log` 中带有 `test/ci/docs` 的提交为准）。
+- **R-12/R-13 验收提交**：`5901035`（测试、CI、lockfile 修复；该提交的 GitHub Actions 运行 40750221249 已通过）。本段 CI 结果与最终说明的文档补记随该提交之后的文档提交进入仓库。
 
 ## 16. 已知边界
 
