@@ -1,0 +1,21 @@
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+frontend/*.tsbuildinfo
+
+# Backend
+backend/target/
+backend/data/uploads/
+backend/data/results/
+backend/*.log
+
+# Tooling / local-only artifacts
+.local/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db

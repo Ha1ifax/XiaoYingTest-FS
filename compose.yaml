@@ -1,0 +1,91 @@
+name: momento-studio
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: momento-mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-momento_studio}
+      MYSQL_USER: ${MYSQL_USER:-momento}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-momento_dev_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-momento_root_dev_password}
+      TZ: Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/02-data.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: momento-backend
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE:-momento_studio}
+      DB_USERNAME: ${MYSQL_USER:-momento}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-momento_dev_password}
+      APP_UPLOAD_DIR: /app/data/uploads
+      APP_RESULT_DIR: /app/data/results
+      APP_CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000}
+      APP_DEV_API_ENABLED: "true"
+      APP_AUTH_COOKIE_SECURE: "${APP_AUTH_COOKIE_SECURE:-false}"
+      APP_SESSION_DAYS: "${APP_SESSION_DAYS:-30}"
+      SIM_ASSET_CHECK_DELAY_MS: ${SIM_ASSET_CHECK_DELAY_MS:-1800}
+      SIM_GENERATE_DELAY_MS: ${SIM_GENERATE_DELAY_MS:-4200}
+      SIM_FINALIZE_DELAY_MS: ${SIM_FINALIZE_DELAY_MS:-1500}
+      TZ: Asia/Shanghai
+    volumes:
+      - app-data:/app/data
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/templates"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        JAVA_API_ORIGIN: ${JAVA_API_ORIGIN:-http://backend:8080}
+    container_name: momento-frontend
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      JAVA_API_ORIGIN: ${JAVA_API_ORIGIN:-http://backend:8080}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  app-data:
