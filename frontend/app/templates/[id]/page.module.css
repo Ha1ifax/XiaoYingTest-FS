@@ -2294,3 +2294,56 @@
     transition: none;
   }
 }
+
+.readyPrompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 17px;
+  padding: 12px;
+  color: var(--forest);
+  background: #eef5d4;
+  border: 1px solid #d9e6b0;
+  border-radius: 8px;
+}
+
+.readyPromptIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--forest-deep);
+  background: var(--lime);
+  border-radius: 50%;
+  place-items: center;
+}
+
+.readyPromptIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.readyPrompt strong {
+  display: block;
+  color: var(--forest-deep);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.readyPrompt p {
+  margin-top: 3px;
+  color: var(--forest-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 430px) {
+  .readyPrompt {
+    padding: 10px;
+  }
+
+  .readyPrompt p {
+    font-size: 11.5px;
+  }
+}

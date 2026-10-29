@@ -14,6 +14,16 @@
     box-shadow 220ms ease;
 }
 
+.media {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 74%;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
 .cover {
   position: absolute;
   inset: 0;
@@ -21,15 +31,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
   transition: transform 650ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.shade {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(9, 11, 7, 0.48) 0%, transparent 24%);
 }
 
 .topline {
@@ -37,7 +40,7 @@
   top: 10px;
   right: 10px;
   left: 10px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -81,37 +84,48 @@
   left: 0;
   z-index: 2;
   display: flex;
-  align-items: center;
+  height: 26%;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 13px;
-  color: #fffdf5;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  color: var(--ink);
+  background: var(--surface);
 }
 
-.number {
-  padding-bottom: 2px;
-  color: rgba(255, 253, 245, 0.46);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.05em;
+.title {
+  display: -webkit-box;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .arrow {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   margin-left: auto;
-  color: var(--forest-deep);
-  background: rgba(250, 245, 241, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.65);
+  margin-bottom: 1px;
+  color: var(--forest);
+  background: var(--surface-strong);
+  border: 1px solid var(--hairline);
   border-radius: 50%;
-  box-shadow: 0 3px 10px rgba(30, 36, 21, 0.12);
-  opacity: 0.92;
+  box-shadow: 0 2px 7px rgba(30, 36, 21, 0.06);
+  opacity: 1;
   transition:
     background 200ms ease,
     border-color 200ms ease,
-    opacity 200ms ease;
+    color 200ms ease;
 }
 
 .arrow svg {
@@ -133,7 +147,10 @@
   color: var(--forest-deep);
   background: var(--lime);
   border-color: var(--lime);
-  opacity: 1;
+}
+
+.card:hover .title {
+  color: var(--coral);
 }
 
 .card:focus-visible {
@@ -166,17 +183,24 @@
     height: 9px;
   }
 
-  .caption {
-    padding: 9px;
+  .media {
+    height: 70%;
   }
 
-  .number {
-    display: none;
+  .caption {
+    height: 30%;
+    gap: 8px;
+    padding: 10px 11px 12px;
+  }
+
+  .title {
+    font-size: 16.5px;
+    line-height: 1.12;
   }
 
   .arrow {
-    width: 21px;
-    height: 21px;
+    width: 22px;
+    height: 22px;
     margin-left: auto;
   }
 }

@@ -687,6 +687,18 @@ export default function TemplateDetailPage() {
             </ol>
           </div>
 
+          {allReady && !submitting ? (
+            <div className={styles.readyPrompt} id="ready-note" role="status">
+              <span className={styles.readyPromptIcon} aria-hidden="true">
+                <CheckIcon />
+              </span>
+              <div>
+                <strong>素材已齐备，可以提交。</strong>
+                <p>点击下方按钮后立即生成任务号；三个阶段在 Java 后台继续，关闭页面也不会中断。</p>
+              </div>
+            </div>
+          ) : null}
+
           {submitError ? (
             <div className={styles.submitError} role="alert">
               <AlertIcon />
@@ -708,6 +720,7 @@ export default function TemplateDetailPage() {
               className={styles.submitButton}
               disabled={!canSubmit}
               aria-busy={submitting}
+              aria-describedby={allReady && !submitting ? "ready-note" : undefined}
               onClick={() => void submitTask()}
             >
               {submitting ? (
@@ -722,7 +735,7 @@ export default function TemplateDetailPage() {
                 </>
               ) : (
                 <>
-                  提交制作
+                  开始制作
                   <ArrowRightIcon />
                 </>
               )}

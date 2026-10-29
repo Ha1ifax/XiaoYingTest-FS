@@ -306,7 +306,7 @@ def cover_brand():
     return img
 
 
-def cover_birthday():
+def cover_birthday(include_copy: bool = True):
     img = base_canvas("#F2D6D5", "#CDA0A2", 77, ((680, 80, 1180, 590), "#FFE9E1", 170))
     d = ImageDraw.Draw(img)
     random.seed(19)
@@ -330,9 +330,10 @@ def cover_birthday():
     d.ellipse((354 * S, 1108 * S, 446 * S, 1200 * S), fill=(*hx("#C78878"), 255))
     draw_text(d, (400, 1154), "M", font(FONT_SERIF, 62), "#F7E5DC", "mm")
     stamp(d, fill="#5B3E3D")
-    draw_text(d, (72, 632), "生日花笺", font(FONT_CN_BOLD, 86), "#4A302F")
-    draw_text(d, (74, 748), "HAPPY DAY  /  A NOTE FOR YOU", font(FONT_EN, 18), "#714A47")
-    draw_text(d, (74, 810), "为重要的人，认真说一句生日快乐。", font(FONT_CN, 22), "#68423F")
+    if include_copy:
+        draw_text(d, (72, 632), "生日花笺", font(FONT_CN_BOLD, 86), "#4A302F")
+        draw_text(d, (74, 748), "HAPPY DAY  /  A NOTE FOR YOU", font(FONT_EN, 18), "#714A47")
+        draw_text(d, (74, 810), "为重要的人，认真说一句生日快乐。", font(FONT_CN, 22), "#68423F")
     return img
 
 
