@@ -278,7 +278,7 @@ npm run build
 - 后端测试位于 `backend/src/test/java/.../task/TaskWorkflowRunnerTest.java`，覆盖三阶段顺序、指定步骤失败后中断、素材数量不合法和任务抢占失败。
 - 前端测试位于 `frontend/lib/task-state.test.ts`，覆盖查询 Key 的账号隔离、未完成任务轮询与终态停止，以及查询异常、空数据和失败任务的状态区分。
 - 前端 lockfile 显式锁定 `@emnapi/core` / `@emnapi/runtime`，避免 npm 对可选 WASM peer 的解析差异导致 `npm ci` 在 Linux CI 中校验失败。
-- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。2026-10-29 的实际运行 [40750221249](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40750221249) 已通过：前端 install/lint/typecheck/test/build 与后端 test/package 全部成功。
+- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。2026-10-29 的最新实际运行 [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411) 已通过：前端 install/lint/typecheck/test/build 与后端 test/package 全部成功。
 - 提交前最少执行一次完整命令；生产环境只部署通过 `mvn package` 和 `npm run build` 的产物。
 
 ## 5. 页面与演示路径
@@ -540,7 +540,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | `npm run test` | 通过：7 个前端状态/轮询测试 |
 | `npm run typecheck` | 通过 |
 | `npm run build` | 通过；构建后以 `next start` 运行生产产物 |
-| GitHub Actions | 通过：run [40750221249](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40750221249)；前端 install/lint/typecheck/test/build、后端 test/package 均成功 |
+| GitHub Actions | 通过：run [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411)；前端 install/lint/typecheck/test/build、后端 test/package 均成功 |
 | 模板列表/分类/详情 API | 7 个模板、4 个分类；不存在模板 404 |
 | 图片上传 | 合法 JPEG/PNG 201；伪装 MIME、超大小、非图片被拒 |
 | 注册/登录 | 注册成功返回 201 + `Set-Cookie`；错误密码 401；重复邮箱 409；未登录访问任务接口 401 |
@@ -572,7 +572,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 
 ## 12. 实际投入
 
-从首次需求到本次验收（2026-10-28 13:40 至 2026-10-29 03:00，Asia/Shanghai）跨约 13 小时；其中包含等待构建、后台任务和人工查看的时间。以下为按会话内容复盘的有效工作量估算，并非精确计时：
+从首次需求到本次验收（2026-10-28 13:40 至 2026-10-29 21:20，Asia/Shanghai）跨约 31.5 小时；其中包含等待构建、后台任务和人工查看的时间。以下为按会话内容复盘的有效工作量估算，并非精确计时：
 
 | 阶段 | 主要内容 | 估算有效投入 |
 |---|---|---:|
@@ -581,7 +581,8 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | Next.js 前端 | 模板库/详情/历史/账号/管理页、异步状态与轮询 | 4 小时 |
 | 视觉与素材 | Kindsight 方向、本地封面/样片、响应式与字号调整 | 1.5 小时 |
 | 测试、CI 与文档 | 单测、Lint、Compose、README、截图和端到端验收 | 2 小时 |
-| 合计 | 含 AI 代理的编码与测试执行；人工负责需求、取舍和验收 | **约 12.5 小时** |
+| 后续设计迭代 | 详情相关推荐、移动端快捷条、账号/模板管理微调 | 1.5 小时 |
+| 合计 | 含 AI 代理的编码与测试执行；人工负责需求、取舍和验收 | **约 14 小时** |
 
 协作方式：AI 编码代理承担脚手架、页面/接口实现、测试和文档的大部分执行工作；人工负责目标设定、视觉方向、关键取舍和结果验收。所有 AI 产出都经过本地命令、接口调用或 Playwright 截图复核后才计入完成；本 README 只把实际运行过的 CI 写为已验证，未安装 Docker 的环境不把镜像构建写成已验证。
 
@@ -633,6 +634,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 
 - **初始交付提交**：`d8c3ebc`（含此前完整站点与文档）。
 - **R-12/R-13 验收提交**：`5901035`（测试、CI、lockfile 修复；该提交的 GitHub Actions 运行 40750221249 已通过）。本段 CI 结果与最终说明的文档补记随该提交之后的文档提交进入仓库。
+- **详情优化验收提交**：`788eb09`（相关模板推荐、移动端制作快捷条、UI-02 截图与 README 更新；CI 运行 [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411) 已通过）。
 
 ## 16. 已知边界
 
