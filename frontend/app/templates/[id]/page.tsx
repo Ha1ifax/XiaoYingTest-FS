@@ -10,11 +10,22 @@ import {
   type CSSProperties,
   type DragEvent,
 } from "react";
-import { AlertIcon, ArrowRightIcon, CheckIcon, CloseIcon, LockIcon, RefreshIcon, SparklesIcon, UploadIcon } from "@/components/icons";
+import {
+  AlertIcon,
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  CheckIcon,
+  CloseIcon,
+  LockIcon,
+  RefreshIcon,
+  SparklesIcon,
+  UploadIcon,
+} from "@/components/icons";
+import { TemplateCard } from "@/components/template-card";
 import { api, ApiError, fetchSampleImage, uploadAsset } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatBytes, getErrorMessage, isAbortError, mimeListLabel } from "@/lib/format";
-import { useTemplate } from "@/lib/hooks";
+import { useTemplate, useTemplates } from "@/lib/hooks";
 import type { CreationTask, ItemsResponse, Template, UploadedAsset } from "@/lib/types";
 import styles from "./page.module.css";
 
@@ -80,6 +91,7 @@ export default function TemplateDetailPage() {
   const { user } = useAuth();
   const templateId = params?.id ?? "";
   const templateQuery = useTemplate(templateId);
+  const libraryQuery = useTemplates(null);
   const template = templateQuery.data;
   const nextPath = pathname || `/templates/${templateId}`;
   const loginHref = `/login?next=${encodeURIComponent(nextPath)}`;
@@ -88,6 +100,7 @@ export default function TemplateDetailPage() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const slotsRef = useRef<Slot[]>([]);
   const [notice, setNotice] = useState<Notice>(null);
+  const [dockHidden, setDockHidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [sampleLoading, setSampleLoading] = useState<string | null>(null);
@@ -129,6 +142,19 @@ export default function TemplateDetailPage() {
   useEffect(() => {
     submittingRef.current = submitting;
   }, [submitting]);
+
+  useEffect(() => {
+    const updateDock = () => {
+      setDockHidden(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 190);
+    };
+    updateDock();
+    window.addEventListener("scroll", updateDock, { passive: true });
+    window.addEventListener("resize", updateDock);
+    return () => {
+      window.removeEventListener("scroll", updateDock);
+      window.removeEventListener("resize", updateDock);
+    };
+  }, []);
 
   const readyCount = slots.filter((slot) => slot.status === "ready" && slot.asset).length;
   const uploading = slots.some((slot) => slot.status === "uploading");
@@ -423,6 +449,14 @@ export default function TemplateDetailPage() {
 
   if (!template) return null;
 
+  const relatedTemplates = [...(libraryQuery.data?.items ?? [])]
+    .filter((item) => item.id !== template.id)
+    .sort(
+      (a, b) =>
+        Number(b.category === template.category) - Number(a.category === template.category),
+    )
+    .slice(0, 4);
+
   return (
     <div className={`shell ${styles.page}`}>
       <nav className={styles.crumbs} aria-label="面包屑">
@@ -602,7 +636,7 @@ export default function TemplateDetailPage() {
           )}
         </section>
 
-        <aside className={styles.orderPanel} aria-label="制作单">
+        <aside id="order" className={styles.orderPanel} aria-label="制作单">
           <div className={styles.orderTop}>
             <span className={styles.orderLabel}>YOUR ORDER</span>
             <span className={`${styles.orderState} ${allReady ? styles.orderStateReady : ""}`}>
@@ -706,6 +740,52 @@ export default function TemplateDetailPage() {
             本地模拟生成 · 不调用真实 AI
           </div>
         </aside>
+      </div>
+
+      {relatedTemplates.length > 0 ? (
+        <section className={styles.related} aria-labelledby="related-heading">
+          <div className={styles.relatedHead}>
+            <div>
+              <p className="eyebrow">KEEP LOOKING</p>
+              <h2 id="related-heading">也许你还会喜欢</h2>
+            </div>
+            <Link href="/#templates" className={styles.relatedAll}>
+              全部模板
+              <ArrowUpRightIcon />
+            </Link>
+          </div>
+          <div className={styles.relatedGrid}>
+            {relatedTemplates.map((item) => (
+              <TemplateCard key={item.id} template={item} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div
+        className={styles.mobileDock}
+        role="region"
+        aria-label="制作进度快捷栏"
+        data-hidden={dockHidden ? "true" : undefined}
+      >
+        <div className={styles.mobileDockMeta}>
+          <span>素材</span>
+          <b>
+            {readyCount} / {template.requiredImageCount}
+          </b>
+          <small>{uploading ? "正在上传" : allReady ? "已经齐备" : "等待补充"}</small>
+        </div>
+        {user ? (
+          <a href="#order" className={styles.mobileDockAction}>
+            {allReady ? "去提交" : "查看制作单"}
+            <ArrowRightIcon />
+          </a>
+        ) : (
+          <Link href={loginHref} className={styles.mobileDockAction}>
+            登录后制作
+            <ArrowRightIcon />
+          </Link>
+        )}
       </div>
     </div>
   );
