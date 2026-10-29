@@ -638,6 +638,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 - **初始交付提交**：`d8c3ebc`（含此前完整站点与文档）。
 - **R-12/R-13 验收提交**：`5901035`（测试、CI、lockfile 修复；该提交的 GitHub Actions 运行 40750221249 已通过）。本段 CI 结果与最终说明的文档补记随该提交之后的文档提交进入仓库。
 - **详情优化验收提交**：`788eb09`（相关模板推荐、移动端制作快捷条、UI-02 截图与 README 更新；CI 运行 [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411) 已通过）。
+- **第二轮视觉优化验收提交**：`ba63f20`（模板卡标题解耦、无标题卡片裁图、提交前引导、截图与 README 更新；CI 运行 [40894000494](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40894000494) 已通过）。
 
 ## 16. 已知边界
 
