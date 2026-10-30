@@ -41,9 +41,18 @@ public class DatabaseMigration implements ApplicationRunner {
         );
         addColumnIfMissing(
                 "app_user",
-                "is_admin",
-                "ALTER TABLE app_user ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE AFTER role"
+                "role_key",
+                "ALTER TABLE app_user ADD COLUMN role_key VARCHAR(16) NOT NULL DEFAULT 'MEMBER' AFTER role"
         );
+        if (hasColumn("app_user", "is_admin")) {
+            int promoted = jdbcTemplate.update("""
+                    UPDATE app_user SET role_key = 'ADMIN'
+                    WHERE is_admin = TRUE AND role_key = 'MEMBER'
+                    """);
+            if (promoted > 0) {
+                log.info("Migrated {} legacy admin account(s) to role_key=ADMIN", promoted);
+            }
+        }
         addColumnIfMissing(
                 "creative_template",
                 "is_active",
@@ -54,6 +63,26 @@ public class DatabaseMigration implements ApplicationRunner {
                 "updated_at",
                 "ALTER TABLE creative_template ADD COLUMN updated_at DATETIME(3) NOT NULL "
                         + "DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) AFTER created_at"
+        );
+        addColumnIfMissing(
+                "creation_task",
+                "dispatch_attempts",
+                "ALTER TABLE creation_task ADD COLUMN dispatch_attempts INT NOT NULL DEFAULT 0 AFTER simulation_config"
+        );
+        addColumnIfMissing(
+                "creation_task",
+                "last_dispatched_at",
+                "ALTER TABLE creation_task ADD COLUMN last_dispatched_at DATETIME(3) NULL AFTER dispatch_attempts"
+        );
+        addColumnIfMissing(
+                "creation_task",
+                "retry_count",
+                "ALTER TABLE creation_task ADD COLUMN retry_count INT NOT NULL DEFAULT 0 AFTER last_dispatched_at"
+        );
+        addColumnIfMissing(
+                "creation_task",
+                "last_error",
+                "ALTER TABLE creation_task ADD COLUMN last_error VARCHAR(500) NULL AFTER retry_count"
         );
         addEmailIndexIfMissing();
         ensureTemplateCategories();
@@ -84,6 +113,13 @@ public class DatabaseMigration implements ApplicationRunner {
     }
 
     private void addColumnIfMissing(String table, String column, String ddl) {
+        if (!hasColumn(table, column)) {
+            jdbcTemplate.execute(ddl);
+            log.info("Added {}.{}", table, column);
+        }
+    }
+
+    private boolean hasColumn(String table, String column) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.COLUMNS "
                         + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
@@ -91,10 +127,7 @@ public class DatabaseMigration implements ApplicationRunner {
                 table,
                 column
         );
-        if (count != null && count == 0) {
-            jdbcTemplate.execute(ddl);
-            log.info("Added {}.{}", table, column);
-        }
+        return count != null && count > 0;
     }
 
     private void addEmailIndexIfMissing() {

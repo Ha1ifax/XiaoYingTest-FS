@@ -10,6 +10,7 @@ import com.momento.studio.simulation.SimulationConfig;
 import com.momento.studio.simulation.SimulationService;
 import com.momento.studio.template.CreativeTemplate;
 import com.momento.studio.template.TemplateService;
+import com.momento.studio.task.queue.TaskRateLimiter;
 import com.momento.studio.user.AppUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -41,9 +42,11 @@ public class TaskService {
     private final SimulationService simulationService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final TaskRateLimiter taskRateLimiter;
 
     @Transactional
     public TaskResponse create(AppUser user, CreateTaskRequest request) {
+        taskRateLimiter.check(user.getId());
         CreativeTemplate template = templateService.requireTemplate(request.templateId());
 
         List<String> requestedIds = request.assetIds() == null ? List.of() : request.assetIds().stream()

@@ -6,14 +6,27 @@ export interface ItemsResponse<T> {
   items: T[];
 }
 
+export type UserRole = "MEMBER" | "EDITOR" | "ADMIN";
+
 export interface AuthUser {
   id: string;
   displayName: string;
   initials: string;
   role: string;
-  admin: boolean;
+  roleKey: UserRole;
   email: string;
   createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  displayName: string;
+  initials: string;
+  role: string;
+  roleKey: UserRole;
+  email: string;
+  createdAt: string;
+  taskCount: number;
 }
 
 export interface AuthResponse {
@@ -116,6 +129,8 @@ export interface CreationTask {
   failureStageLabel: string | null;
   failureReason: string | null;
   resultUrl: string | null;
+  retryCount: number;
+  lastError: string | null;
   template: TaskTemplateSummary;
   assetCount: number;
   createdAt: string;

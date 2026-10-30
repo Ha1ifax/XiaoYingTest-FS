@@ -2,6 +2,7 @@ package com.momento.studio.template;
 
 import com.momento.studio.common.ApiException;
 import com.momento.studio.common.ItemsResponse;
+import com.momento.studio.user.UserPermissions;
 import com.momento.studio.config.CurrentUser;
 import com.momento.studio.template.TemplateAdminDtos.ActiveRequest;
 import com.momento.studio.template.TemplateAdminDtos.AdminCategoryResponse;
@@ -36,7 +37,7 @@ public class TemplateAdminController {
 
     @GetMapping
     public ItemsResponse<AdminTemplateResponse> list(@CurrentUser AppUser user) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return new ItemsResponse<>(templateAdminService.findAll());
     }
 
@@ -45,7 +46,7 @@ public class TemplateAdminController {
             @CurrentUser AppUser user,
             @Valid @RequestBody UpsertRequest request
     ) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(templateAdminService.create(request));
     }
 
@@ -55,7 +56,7 @@ public class TemplateAdminController {
             @PathVariable String id,
             @Valid @RequestBody UpsertRequest request
     ) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return templateAdminService.update(id, request);
     }
 
@@ -65,20 +66,20 @@ public class TemplateAdminController {
             @PathVariable String id,
             @Valid @RequestBody ActiveRequest request
     ) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return templateAdminService.setActive(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@CurrentUser AppUser user, @PathVariable String id) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         templateAdminService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/categories")
     public ItemsResponse<AdminCategoryResponse> categories(@CurrentUser AppUser user) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return new ItemsResponse<>(templateAdminService.findCategories());
     }
 
@@ -87,14 +88,14 @@ public class TemplateAdminController {
             @CurrentUser AppUser user,
             @Valid @RequestBody CategoryCreateRequest request
     ) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(templateAdminService.createCategory(request));
     }
 
     @DeleteMapping("/categories/{id}")
     public ResponseEntity<Void> deleteCategory(@CurrentUser AppUser user, @PathVariable String id) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         templateAdminService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
@@ -104,13 +105,8 @@ public class TemplateAdminController {
             @CurrentUser AppUser user,
             @RequestPart("file") MultipartFile file
     ) {
-        requireAdmin(user);
+        UserPermissions.requireTemplateManager(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(templateAdminService.uploadCover(file));
     }
 
-    private void requireAdmin(AppUser user) {
-        if (!user.isAdmin()) {
-            throw ApiException.forbidden("只有管理员可以管理模板库。");
-        }
-    }
 }

@@ -25,6 +25,20 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: momento-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -36,6 +50,13 @@ services:
       DB_NAME: ${MYSQL_DATABASE:-momento_studio}
       DB_USERNAME: ${MYSQL_USER:-momento}
       DB_PASSWORD: ${MYSQL_PASSWORD:-momento_dev_password}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      TASK_STREAM_KEY: ${TASK_STREAM_KEY:-momento:tasks}
+      TASK_CONSUMER_GROUP: ${TASK_CONSUMER_GROUP:-momento-workers}
+      TASK_CONSUMER_COUNT: ${TASK_CONSUMER_COUNT:-2}
+      TASK_MAX_RETRIES: ${TASK_MAX_RETRIES:-3}
+      TASK_RATE_LIMIT_PER_MINUTE: ${TASK_RATE_LIMIT_PER_MINUTE:-12}
       APP_UPLOAD_DIR: /app/data/uploads
       APP_RESULT_DIR: /app/data/results
       APP_CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000}
@@ -52,6 +73,8 @@ services:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/templates"]
@@ -89,3 +112,4 @@ services:
 volumes:
   mysql-data:
   app-data:
+  redis-data:

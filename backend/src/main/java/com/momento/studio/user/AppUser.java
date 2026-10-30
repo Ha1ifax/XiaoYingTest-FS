@@ -14,7 +14,7 @@ public class AppUser {
     private String displayName;
     private String initials;
     private String role;
-    private boolean admin;
+    private UserRole roleKey = UserRole.MEMBER;
     private String email;
     private String passwordHash;
     private LocalDateTime createdAt;

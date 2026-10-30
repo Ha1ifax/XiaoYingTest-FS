@@ -14,7 +14,8 @@ public class AppProperties {
 
     private Storage storage = new Storage();
     private Simulation simulation = new Simulation();
-    private Workflow workflow = new Workflow();
+    private Queue queue = new Queue();
+    private RateLimit rateLimit = new RateLimit();
     private DevApi devApi = new DevApi();
     private Cors cors = new Cors();
     private Auth auth = new Auth();
@@ -46,10 +47,21 @@ public class AppProperties {
 
     @Getter
     @Setter
-    public static class Workflow {
-        private int corePoolSize = 2;
-        private int maxPoolSize = 4;
-        private int queueCapacity = 100;
+    public static class Queue {
+        private String streamKey = "momento:tasks";
+        private String consumerGroup = "momento-workers";
+        private String consumerPrefix = "momento-worker";
+        private int consumers = 2;
+        private int maxRetries = 3;
+        private long dispatchIntervalMs = 10_000;
+        private long dispatchInitialDelayMs = 30_000;
+        private long pollBlockMs = 2_000;
+    }
+
+    @Getter
+    @Setter
+    public static class RateLimit {
+        private int tasksPerMinute = 12;
     }
 
     @Getter

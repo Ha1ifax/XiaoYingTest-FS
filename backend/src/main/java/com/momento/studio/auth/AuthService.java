@@ -4,6 +4,7 @@ import com.momento.studio.common.ApiException;
 import com.momento.studio.config.AppProperties;
 import com.momento.studio.user.AppUser;
 import com.momento.studio.user.UserMapper;
+import com.momento.studio.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +56,7 @@ public class AuthService {
         user.setDisplayName(displayName);
         user.setInitials(initialsFor(displayName));
         user.setRole("独立创作者");
-        user.setAdmin(false);
+        user.setRoleKey(UserRole.MEMBER);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setCreatedAt(now);

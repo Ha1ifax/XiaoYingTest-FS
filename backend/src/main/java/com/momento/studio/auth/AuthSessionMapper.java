@@ -24,7 +24,7 @@ public interface AuthSessionMapper {
                @Param("lastSeenAt") LocalDateTime lastSeenAt);
 
     @Select("""
-            SELECT u.id, u.display_name, u.initials, u.role, u.is_admin AS admin,
+            SELECT u.id, u.display_name, u.initials, u.role, u.role_key,
                    u.email, u.created_at, u.updated_at
             FROM auth_session s
             JOIN app_user u ON u.id = s.user_id

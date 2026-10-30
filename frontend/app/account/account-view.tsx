@@ -17,6 +17,7 @@ import {
   ShieldIcon,
 } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
+import { canManageTemplates, canManageUsers } from "@/lib/authz";
 import { getErrorMessage } from "@/lib/format";
 import styles from "./account.module.css";
 
@@ -391,7 +392,7 @@ export function AccountView() {
             </span>
             <ArrowRightIcon />
           </button>
-          {user.admin ? (
+          {canManageTemplates(user) ? (
             <Link href="/studio/templates" className={styles.menuRow}>
               <span className={styles.menuIcon} aria-hidden="true">
                 <LayersIcon />
@@ -399,6 +400,18 @@ export function AccountView() {
               <span className={styles.menuCopy}>
                 <b>模板管理</b>
                 <small>新增模板、调整素材要求或下架</small>
+              </span>
+              <ArrowRightIcon />
+            </Link>
+          ) : null}
+          {canManageUsers(user) ? (
+            <Link href="/studio/users" className={styles.menuRow}>
+              <span className={styles.menuIcon} aria-hidden="true">
+                <ShieldIcon />
+              </span>
+              <span className={styles.menuCopy}>
+                <b>成员与权限</b>
+                <small>分配管理员、编辑和普通成员</small>
               </span>
               <ArrowRightIcon />
             </Link>

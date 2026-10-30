@@ -5,6 +5,11 @@ server:
 spring:
   application:
     name: momento-studio-api
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      timeout: 5s
   datasource:
     url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:momento_studio}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: ${DB_USERNAME:root}
@@ -42,10 +47,17 @@ app:
     finalize-delay-ms: ${SIM_FINALIZE_DELAY_MS:1500}
     failure-stage: ${SIM_FAILURE_STAGE:}
     failure-message: ${SIM_FAILURE_MESSAGE:}
-  workflow:
-    core-pool-size: ${WORKFLOW_CORE_POOL_SIZE:2}
-    max-pool-size: ${WORKFLOW_MAX_POOL_SIZE:4}
-    queue-capacity: ${WORKFLOW_QUEUE_CAPACITY:100}
+  queue:
+    stream-key: ${TASK_STREAM_KEY:momento:tasks}
+    consumer-group: ${TASK_CONSUMER_GROUP:momento-workers}
+    consumer-prefix: ${TASK_CONSUMER_PREFIX:momento-worker}
+    consumers: ${TASK_CONSUMER_COUNT:2}
+    max-retries: ${TASK_MAX_RETRIES:3}
+    dispatch-interval-ms: ${TASK_DISPATCH_INTERVAL_MS:10000}
+    dispatch-initial-delay-ms: ${TASK_DISPATCH_INITIAL_DELAY_MS:30000}
+    poll-block-ms: ${TASK_POLL_BLOCK_MS:2000}
+  rate-limit:
+    tasks-per-minute: ${TASK_RATE_LIMIT_PER_MINUTE:12}
   dev-api:
     enabled: ${APP_DEV_API_ENABLED:true}
   auth:

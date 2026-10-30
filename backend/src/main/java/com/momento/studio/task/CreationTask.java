@@ -19,6 +19,10 @@ public class CreationTask {
     private String failureReason;
     private String resultUrl;
     private String simulationConfig;
+    private int dispatchAttempts;
+    private LocalDateTime lastDispatchedAt;
+    private int retryCount;
+    private String lastError;
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;

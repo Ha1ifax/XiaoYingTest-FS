@@ -8,6 +8,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -31,7 +32,6 @@ public class DemoAccountInitializer implements ApplicationRunner {
                 new DemoAccount("u_chen", "chen@momento.studio")
         );
         for (DemoAccount account : accounts) {
-            userMapper.promoteAdmin(account.userId());
             userMapper.findById(account.userId()).ifPresent(user -> {
                 if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
                     int updated = userMapper.seedCredentials(
@@ -40,6 +40,7 @@ public class DemoAccountInitializer implements ApplicationRunner {
                             passwordEncoder.encode(DEMO_PASSWORD)
                     );
                     if (updated > 0) {
+                        userMapper.updateRole(user.getId(), UserRole.ADMIN, LocalDateTime.now());
                         log.info("Seeded demo login for {}", account.email());
                     }
                 }

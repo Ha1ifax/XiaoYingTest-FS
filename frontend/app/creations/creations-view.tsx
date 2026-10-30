@@ -189,6 +189,14 @@ function TaskCard({
           </span>
           <span className={styles.metaDivider} aria-hidden="true" />
           <time dateTime={task.createdAt}>受理于 {formatDateTime(task.createdAt)}</time>
+          {task.retryCount > 0 ? (
+            <span
+              className={styles.retryTag}
+              title={task.lastError ?? "基础设施异常已自动恢复"}
+            >
+              自动重试 {task.retryCount}
+            </span>
+          ) : null}
           {isNew ? <span className={styles.newTag}>刚刚提交</span> : null}
         </div>
         <StatusPill task={task} />
@@ -257,12 +265,22 @@ function TaskCard({
             </p>
           ) : null}
 
+          {task.retryCount > 0 && (task.status === "QUEUED" || task.status === "PROCESSING") ? (
+            <p className={styles.retryLine} role="status">
+              <RefreshIcon width={15} height={15} />
+              自动恢复中 · 已重试 {task.retryCount} 次，队列会继续接手。
+            </p>
+          ) : null}
+
           {task.status === "FAILED" ? (
             <div className={styles.failureBox} role="note">
               <AlertIcon width={19} height={19} />
               <div>
                 <strong>停在「{task.failureStageLabel ?? "处理阶段"}」</strong>
                 <p>{task.failureReason ?? "这一步没有通过，任务已经停止，没有继续执行后续步骤。"}</p>
+                {task.retryCount > 0 ? (
+                  <p className={styles.retryNote}>自动重试 {task.retryCount} 次后仍未完成。</p>
+                ) : null}
               </div>
             </div>
           ) : null}

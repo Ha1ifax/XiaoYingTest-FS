@@ -66,6 +66,50 @@ public class TaskStateService {
         }
     }
 
+    @Transactional
+    public int recoverInterruptedTasks() {
+        int tasks = taskMapper.resetProcessingTasks();
+        int steps = taskStepMapper.resetRunningSteps();
+        if (tasks > 0) {
+            log.info("Recovered {} interrupted task(s) and reset {} running step(s)", tasks, steps);
+        }
+        return tasks;
+    }
+
+    @Transactional
+    public int recoverStaleTasks() {
+        int tasks = taskMapper.resetStaleProcessingTasks();
+        int steps = taskStepMapper.resetRunningSteps();
+        if (tasks > 0) {
+            log.warn("Recovered {} stale processing task(s)", tasks);
+        }
+        return tasks;
+    }
+
+    @Transactional
+    public int releaseForRetry(String taskId, Stage stage, String reason) {
+        String normalized = trimReason(reason);
+        if (taskMapper.releaseForRetry(taskId, normalized) != 1) {
+            throw new IllegalStateException("Task is not processing: " + taskId);
+        }
+        taskStepMapper.resetStageForRetry(taskId, stage);
+        Integer retryCount = taskMapper.findRetryCount(taskId);
+        return retryCount == null ? 0 : retryCount;
+    }
+
+    @Transactional
+    public void recordResult(String taskId, String resultUrl) {
+        taskMapper.recordResult(taskId, resultUrl);
+    }
+
+    @Transactional
+    public void failAfterRetries(String taskId, Stage stage, String reason) {
+        String normalized = trimReason(reason);
+        taskStepMapper.markFailedAfterRetry(taskId, stage, normalized);
+        taskStepMapper.skipAfter(taskId, stage.order());
+        taskMapper.markFailedAfterRetry(taskId, stage, normalized);
+    }
+
     private String trimReason(String reason) {
         if (reason == null || reason.isBlank()) {
             return "制作任务未能完成，请稍后再试。";

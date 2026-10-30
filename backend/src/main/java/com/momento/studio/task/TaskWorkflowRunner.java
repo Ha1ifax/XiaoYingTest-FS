@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momento.studio.asset.AssetMapper;
 import com.momento.studio.asset.AssetStorageService;
 import com.momento.studio.asset.UploadedAsset;
+import com.momento.studio.config.AppProperties;
 import com.momento.studio.simulation.SimulationConfig;
 import com.momento.studio.simulation.SimulationService;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -20,12 +23,14 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TaskWorkflowRunner {
 
     private final TaskMapper taskMapper;
+    private final TaskStepMapper taskStepMapper;
     private final TaskStateService taskStateService;
     private final AssetMapper assetMapper;
     private final AssetStorageService assetStorageService;
     private final ResultComposer resultComposer;
     private final SimulationService simulationService;
     private final ObjectMapper objectMapper;
+    private final AppProperties properties;
 
     public void run(String taskId) {
         if (!taskStateService.claim(taskId)) {
@@ -38,36 +43,50 @@ public class TaskWorkflowRunner {
             return;
         }
         SimulationConfig config = readSimulationConfig(task.getSimulationConfig());
-        log.info("Task {} started (failureStage={}, delays={}/{}/{})",
-                taskId, config.failureStage(), config.assetCheckDelayMs(),
+        log.info("Task {} started (retry={}, failureStage={}, delays={}/{}/{})",
+                taskId, task.getRetryCount(), config.failureStage(), config.assetCheckDelayMs(),
                 config.generateDelayMs(), config.finalizeDelayMs());
 
+        Stage activeStage = null;
+        String resultUrl = task.getResultUrl();
         try {
             List<UploadedAsset> assets = assetMapper.findByTaskId(taskId);
-            executeStage(taskId, Stage.ASSET_CHECK, config,
-                    () -> checkAssets(task, assets));
-            executeStage(taskId, Stage.GENERATE, config,
-                    () -> generateDraft(task, assets));
+            Map<Stage, TaskStep> steps = taskStepMapper.findByTaskId(taskId).stream()
+                    .collect(Collectors.toMap(TaskStep::getStage, Function.identity()));
 
-            AtomicReference<String> resultUrl = new AtomicReference<>();
-            executeStage(taskId, Stage.FINALIZE, config, () -> {
-                String url = resultComposer.compose(task, assets);
-                resultUrl.set(url);
-                return "结果已整理为 4:5 预览图";
-            });
-
-            if (resultUrl.get() == null) {
-                throw new StageFailure(Stage.FINALIZE, "结果整理没有返回可预览的图片。");
+            for (Stage stage : Stage.values()) {
+                TaskStep step = steps.get(stage);
+                if (step != null && step.getStatus() == StepStatus.SUCCEEDED) {
+                    log.info("Task {} resumes after succeeded stage {}", taskId, stage);
+                    continue;
+                }
+                activeStage = stage;
+                if (stage == Stage.FINALIZE) {
+                    resultUrl = executeFinalize(taskId, config, () -> resultComposer.compose(task, assets));
+                } else if (stage == Stage.ASSET_CHECK) {
+                    executeStage(taskId, stage, config, () -> checkAssets(task, assets));
+                } else {
+                    executeStage(taskId, stage, config, () -> generateDraft(task, assets));
+                }
             }
-            taskStateService.completeTask(taskId, resultUrl.get());
-            log.info("Task {} completed: {}", taskId, resultUrl.get());
+
+            if (resultUrl == null) {
+                resultUrl = taskMapper.findById(taskId)
+                        .map(CreationTask::getResultUrl)
+                        .orElse(null);
+            }
+            if (resultUrl == null) {
+                throw new IllegalStateException("All stages completed without a result URL");
+            }
+            taskStateService.completeTask(taskId, resultUrl);
+            log.info("Task {} completed: {}", taskId, resultUrl);
         } catch (StageFailure failure) {
-            log.warn("Task {} failed at {}: {}", taskId, failure.stage, failure.getMessage());
+            log.warn("Task {} failed permanently at {}: {}", taskId, failure.stage, failure.getMessage());
             recordFailure(taskId, failure.stage, failure.getMessage());
         } catch (Exception exception) {
-            log.error("Task {} failed unexpectedly", taskId, exception);
-            Stage stage = currentStage(taskId);
-            recordFailure(taskId, stage, "制作过程出现意外，请稍后再试。");
+            Stage stage = activeStage != null ? activeStage : firstIncompleteStage(taskId);
+            log.error("Task {} failed unexpectedly at {}", taskId, stage, exception);
+            handleInfrastructureFailure(taskId, stage, exception);
         }
     }
 
@@ -96,7 +115,11 @@ public class TaskWorkflowRunner {
         return "模拟生成完成，画面草稿 #" + draft;
     }
 
-    private void executeStage(String taskId, Stage stage, SimulationConfig config, StageAction action) {
+    /**
+     * Runs one checkpoint. Succeeded stages are skipped by the caller, so a
+     * process restart resumes at the first incomplete stage.
+     */
+    private String executeStage(String taskId, Stage stage, SimulationConfig config, StageAction action) {
         taskStateService.beginStage(taskId, stage);
         try {
             Thread.sleep(config.delayFor(stage));
@@ -105,14 +128,54 @@ public class TaskWorkflowRunner {
             }
             String detail = action.run();
             taskStateService.completeStage(taskId, stage, detail);
+            return detail;
         } catch (StageFailure failure) {
             throw failure;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new StageFailure(stage, "任务处理被服务器中断，请稍后重新提交。");
+            throw new InfrastructureFailure(stage, "任务处理被服务器中断。", exception);
         } catch (Exception exception) {
-            log.error("Stage {} failed for task {}", stage, taskId, exception);
-            throw new StageFailure(stage, fallbackReason(stage));
+            throw new InfrastructureFailure(stage, fallbackReason(stage), exception);
+        }
+    }
+
+    private String executeFinalize(String taskId, SimulationConfig config, StageAction action) {
+        taskStateService.beginStage(taskId, Stage.FINALIZE);
+        try {
+            Thread.sleep(config.delayFor(Stage.FINALIZE));
+            if (config.failsAt(Stage.FINALIZE)) {
+                throw new StageFailure(Stage.FINALIZE, config.failureReason(Stage.FINALIZE));
+            }
+            String resultUrl = action.run();
+            taskStateService.recordResult(taskId, resultUrl);
+            taskStateService.completeStage(taskId, Stage.FINALIZE, "结果已整理为 4:5 预览图");
+            return resultUrl;
+        } catch (StageFailure failure) {
+            throw failure;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new InfrastructureFailure(Stage.FINALIZE, "任务处理被服务器中断。", exception);
+        } catch (Exception exception) {
+            throw new InfrastructureFailure(Stage.FINALIZE, fallbackReason(Stage.FINALIZE), exception);
+        }
+    }
+
+    private void handleInfrastructureFailure(String taskId, Stage stage, Exception exception) {
+        String reason = "制作过程出现临时问题，系统会尝试自动恢复。";
+        try {
+            int retryCount = taskStateService.releaseForRetry(taskId, stage, reason);
+            if (retryCount < properties.getQueue().getMaxRetries()) {
+                log.warn("Task {} released for retry {} after {}: {}",
+                        taskId, retryCount, stage, exception.getMessage());
+                return;
+            }
+            taskStateService.failAfterRetries(
+                    taskId,
+                    stage,
+                    "自动重试 " + retryCount + " 次后仍未完成，请稍后再试。"
+            );
+        } catch (Exception stateError) {
+            log.error("Could not release task {} for retry", taskId, stateError);
         }
     }
 
@@ -126,10 +189,12 @@ public class TaskWorkflowRunner {
         }
     }
 
-    private Stage currentStage(String taskId) {
-        return taskMapper.findById(taskId)
-                .map(CreationTask::getCurrentStage)
-                .orElse(Stage.ASSET_CHECK);
+    private Stage firstIncompleteStage(String taskId) {
+        return taskStepMapper.findByTaskId(taskId).stream()
+                .filter(step -> step.getStatus() != StepStatus.SUCCEEDED)
+                .map(TaskStep::getStage)
+                .findFirst()
+                .orElse(Stage.FINALIZE);
     }
 
     private SimulationConfig readSimulationConfig(String json) {
@@ -163,6 +228,15 @@ public class TaskWorkflowRunner {
 
         private StageFailure(Stage stage, String message) {
             super(message);
+            this.stage = stage;
+        }
+    }
+
+    private static class InfrastructureFailure extends RuntimeException {
+        private final Stage stage;
+
+        private InfrastructureFailure(Stage stage, String message, Throwable cause) {
+            super(message, cause);
             this.stage = stage;
         }
     }

@@ -13,7 +13,7 @@ import java.util.Optional;
 @Mapper
 public interface UserMapper {
 
-    String COLUMNS = "id, display_name, initials, role, is_admin AS admin, email, password_hash, created_at, updated_at";
+    String COLUMNS = "id, display_name, initials, role, role_key, email, password_hash, created_at, updated_at";
 
     @Select("SELECT " + COLUMNS + " FROM app_user ORDER BY created_at, id")
     List<AppUser> findAll();
@@ -26,9 +26,9 @@ public interface UserMapper {
 
     @Insert("""
             INSERT INTO app_user
-                (id, display_name, initials, role, is_admin, email, password_hash, created_at, updated_at)
+                (id, display_name, initials, role, role_key, email, password_hash, created_at, updated_at)
             VALUES
-                (#{id}, #{displayName}, #{initials}, #{role}, #{admin}, #{email}, #{passwordHash}, #{createdAt}, #{updatedAt})
+                (#{id}, #{displayName}, #{initials}, #{role}, #{roleKey}, #{email}, #{passwordHash}, #{createdAt}, #{updatedAt})
             """)
     int insert(AppUser user);
 
@@ -48,6 +48,11 @@ public interface UserMapper {
                         @Param("email") String email,
                         @Param("passwordHash") String passwordHash);
 
-    @Update("UPDATE app_user SET is_admin = TRUE WHERE id = #{id}")
-    int promoteAdmin(@Param("id") String id);
+    @Update("UPDATE app_user SET role_key = #{roleKey}, updated_at = #{updatedAt} WHERE id = #{id}")
+    int updateRole(@Param("id") String id,
+                   @Param("roleKey") UserRole roleKey,
+                   @Param("updatedAt") LocalDateTime updatedAt);
+
+    @Select("SELECT COUNT(*) FROM app_user WHERE role_key = 'ADMIN'")
+    int countAdmins();
 }

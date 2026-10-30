@@ -38,4 +38,8 @@ public class ApiException extends RuntimeException {
     public static ApiException payloadTooLarge(String message) {
         return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE", message);
     }
+
+    public static ApiException tooManyRequests(String message) {
+        return new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", message);
+    }
 }

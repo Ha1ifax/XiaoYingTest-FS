@@ -48,6 +48,8 @@ public class TaskQueryService {
                 task.getFailureStage() == null ? null : task.getFailureStage().label(),
                 task.getFailureReason(),
                 task.getResultUrl(),
+                task.getRetryCount(),
+                task.getLastError(),
                 new TaskResponse.TemplateSummary(
                         task.getTemplateId(),
                         task.getTemplateTitle(),

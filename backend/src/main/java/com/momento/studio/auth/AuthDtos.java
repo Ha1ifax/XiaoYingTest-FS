@@ -60,7 +60,7 @@ public final class AuthDtos {
             String displayName,
             String initials,
             String role,
-            boolean admin,
+            String roleKey,
             String email,
             LocalDateTime createdAt
     ) {
@@ -70,7 +70,7 @@ public final class AuthDtos {
                     user.getDisplayName(),
                     user.getInitials(),
                     user.getRole(),
-                    user.isAdmin(),
+                    user.getRoleKey().name(),
                     user.getEmail(),
                     user.getCreatedAt()
             );

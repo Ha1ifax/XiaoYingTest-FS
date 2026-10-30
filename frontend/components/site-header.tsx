@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { canManageTemplates, canManageUsers } from "@/lib/authz";
 import { cx } from "@/lib/format";
 import {
   ArrowRightIcon,
@@ -155,7 +156,7 @@ export function SiteHeader() {
                           <small>历史任务与成品</small>
                         </span>
                       </Link>
-                      {user.admin ? (
+                      {canManageTemplates(user) ? (
                         <Link
                           href="/studio/templates"
                           role="menuitem"
@@ -168,6 +169,22 @@ export function SiteHeader() {
                           <span>
                             <strong>模板管理</strong>
                             <small>新增、编辑与上下架</small>
+                          </span>
+                        </Link>
+                      ) : null}
+                      {canManageUsers(user) ? (
+                        <Link
+                          href="/studio/users"
+                          role="menuitem"
+                          className={styles.menuItem}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <span className={styles.menuItemIcon}>
+                            <UserIcon />
+                          </span>
+                          <span>
+                            <strong>成员与权限</strong>
+                            <small>分配管理员和编辑角色</small>
                           </span>
                         </Link>
                       ) : null}

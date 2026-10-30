@@ -61,4 +61,29 @@ public interface TaskStepMapper {
             WHERE task_id = #{taskId} AND stage_order > #{stageOrder} AND status = 'PENDING'
             """)
     int skipAfter(@Param("taskId") String taskId, @Param("stageOrder") int stageOrder);
+
+    @Update("""
+            UPDATE task_step
+            SET status = 'FAILED', detail = #{detail}, finished_at = NOW()
+            WHERE task_id = #{taskId} AND stage = #{stage} AND status IN ('PENDING', 'RUNNING')
+            """)
+    int markFailedAfterRetry(@Param("taskId") String taskId,
+                             @Param("stage") Stage stage,
+                             @Param("detail") String detail);
+
+    @Update("""
+            UPDATE task_step ts
+            JOIN creation_task t ON t.id = ts.task_id
+            SET ts.status = 'PENDING', ts.detail = '上次执行被服务中断，等待续跑',
+                ts.started_at = NULL, ts.finished_at = NULL
+            WHERE ts.status = 'RUNNING' AND t.status = 'QUEUED'
+            """)
+    int resetRunningSteps();
+
+    @Update("""
+            UPDATE task_step
+            SET status = 'PENDING', detail = '等待自动重试', started_at = NULL, finished_at = NULL
+            WHERE task_id = #{taskId} AND stage = #{stage} AND status = 'RUNNING'
+            """)
+    int resetStageForRetry(@Param("taskId") String taskId, @Param("stage") Stage stage);
 }

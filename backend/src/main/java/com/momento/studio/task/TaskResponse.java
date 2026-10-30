@@ -13,6 +13,8 @@ public record TaskResponse(
         String failureStageLabel,
         String failureReason,
         String resultUrl,
+        int retryCount,
+        String lastError,
         TemplateSummary template,
         int assetCount,
         LocalDateTime createdAt,

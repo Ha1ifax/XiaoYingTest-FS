@@ -1,6 +1,7 @@
 import type {
   AdminCategory,
   AdminTemplate,
+  AdminUser,
   ApiErrorBody,
   AuthResponse,
   Category,
@@ -12,6 +13,7 @@ import type {
   TemplateInput,
   UploadedAsset,
   UploadProgress,
+  UserRole,
 } from "./types";
 
 export class ApiError extends Error {
@@ -184,6 +186,17 @@ export const api = {
       method: "POST",
       body: form,
       signal,
+    });
+  },
+
+  getAdminUsers(signal?: AbortSignal): Promise<ItemsResponse<AdminUser>> {
+    return request<ItemsResponse<AdminUser>>("/api/admin/users", { signal });
+  },
+
+  updateAdminUserRole(id: string, roleKey: UserRole): Promise<AdminUser> {
+    return request<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ roleKey }),
     });
   },
 

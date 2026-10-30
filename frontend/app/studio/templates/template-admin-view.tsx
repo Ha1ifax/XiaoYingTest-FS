@@ -17,6 +17,7 @@ import {
 } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { canManageTemplates } from "@/lib/authz";
 import { formatBytes, formatDateTime, getErrorMessage, mimeListLabel } from "@/lib/format";
 import type { AdminTemplate, TemplateInput } from "@/lib/types";
 import styles from "./template-admin.module.css";
@@ -80,14 +81,14 @@ export function TemplateAdminView() {
   const adminQuery = useQuery({
     queryKey: ["admin-templates"],
     queryFn: ({ signal }) => api.getAdminTemplates(signal),
-    enabled: Boolean(user?.admin),
+    enabled: Boolean(user) && canManageTemplates(user),
     retry: false,
     refetchOnWindowFocus: false,
   });
   const categoryQuery = useQuery({
     queryKey: ["admin-categories"],
     queryFn: ({ signal }) => api.getAdminCategories(signal),
-    enabled: Boolean(user?.admin),
+    enabled: Boolean(user) && canManageTemplates(user),
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -141,7 +142,7 @@ export function TemplateAdminView() {
     );
   }
 
-  if (!user.admin) {
+  if (!canManageTemplates(user)) {
     return (
       <div className={`shell ${styles.deniedWrap}`}>
         <section className={styles.denied}>
