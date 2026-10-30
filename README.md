@@ -292,7 +292,7 @@ npm run build
 - 后端测试位于 `backend/src/test/java/.../task/TaskWorkflowRunnerTest.java`，覆盖三阶段顺序、断点续跑、指定步骤失败后中断、素材数量不合法、基础设施异常释放重试和任务抢占失败。
 - 前端测试位于 `frontend/lib/task-state.test.ts`，覆盖查询 Key 的账号隔离、未完成任务轮询与终态停止，以及查询异常、空数据和失败任务的状态区分。
 - 前端 lockfile 显式锁定 `@emnapi/core` / `@emnapi/runtime`，避免 npm 对可选 WASM peer 的解析差异导致 `npm ci` 在 Linux CI 中校验失败。
-- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。2026-10-29 的最新实际运行 [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411) 已通过：前端 install/lint/typecheck/test/build 与后端 test/package 全部成功。
+- `.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时并行执行前端 lint/typecheck/test/build 与后端 test/package；任一步失败会阻止通过。2026-10-30 的最新实际运行 [41029883704](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/41029883704) 已通过：前端 install/lint/typecheck/test/build 与后端 test/package 全部成功。
 - 提交前最少执行一次完整命令；生产环境只部署通过 `mvn package` 和 `npm run build` 的产物。
 
 ## 5. 页面与演示路径
@@ -567,7 +567,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 | `npm run test` | 通过：7 个前端状态/轮询测试 |
 | `npm run typecheck` | 通过 |
 | `npm run build` | 通过；构建后以 `next start` 运行生产产物 |
-| GitHub Actions | 通过：run [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411)；前端 install/lint/typecheck/test/build、后端 test/package 均成功 |
+| GitHub Actions | 通过：run [41029883704](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/41029883704)；前端 install/lint/typecheck/test/build、后端 test/package 均成功 |
 | 模板列表/分类/详情 API | 7 个模板、4 个分类；不存在模板 404 |
 | 图片上传 | 合法 JPEG/PNG 201；伪装 MIME、超大小、非图片被拒 |
 | 注册/登录 | 注册成功返回 201 + `Set-Cookie`；错误密码 401；重复邮箱 409；未登录访问任务接口 401 |
@@ -671,6 +671,7 @@ curl -b cookie.txt -X PUT http://localhost:8080/api/dev/simulation \
 - **R-12/R-13 验收提交**：`5901035`（测试、CI、lockfile 修复；该提交的 GitHub Actions 运行 40750221249 已通过）。本段 CI 结果与最终说明的文档补记随该提交之后的文档提交进入仓库。
 - **详情优化验收提交**：`788eb09`（相关模板推荐、移动端制作快捷条、UI-02 截图与 README 更新；CI 运行 [40880624411](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40880624411) 已通过）。
 - **第二轮视觉优化验收提交**：`ba63f20`（模板卡标题解耦、无标题卡片裁图、提交前引导、截图与 README 更新；CI 运行 [40894000494](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/40894000494) 已通过）。
+- **Redis / RBAC 验收提交**：`fd8e3a4`（Redis Streams 持久队列、断点续跑、自动重试、Redis 锁/限流、三角色权限与成员页、Compose Redis、测试和文档；CI 运行 [41029883704](https://github.com/Ha1ifax/XiaoYingTest-FS/actions/runs/41029883704) 已通过）。文档回填提交紧随其后。
 
 ## 16. 已知边界
 
